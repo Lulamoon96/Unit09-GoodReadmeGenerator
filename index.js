@@ -7,6 +7,29 @@ const figlet = require('figlet');
 const appendFileAsync = util.promisify(fs.appendFile)
 const writeFileAsync = util.promisify(fs.writeFile)
 
+const axiosGetContributors = (url, repo) => {
+
+  axios
+    .get(url)
+    .then(res => {
+
+      const returnData = []
+      const relevantRepo = res.data.filter(repos => {return repos.name === repo})
+      const contriURL = relevantRepo[0].contributors_url
+      const toWriteBadge = relevantRepo.length
+      returnData.push(contriURL, toWriteBadge)
+      console.log(returnData)
+      return returnData
+
+    })
+    .catch(
+
+      err => console.log(err)
+
+    )
+
+}
+
 console.log(figlet.textSync('README Generator', {
   horizontalLayout: 'default',
   verticalLayout: 'default'
@@ -86,18 +109,32 @@ inquirer
     const { username, name, repo, description, contents, install, usage, testBool, tests, contributingBool, contributing, license } = response
     const queryUrl = `https://api.github.com/users/${username}`
     const queryRepoUrl = `https://api.github.com/users/${username}/repos?per_page=100`
-    const queryEmailUrl = `https://api.github.com/users/${username}/public_emails`
 
+    let badgesData = axiosGetContributors(queryRepoUrl, repo)
+    console.log(badgesData)
+
+    if (badgesData[1]) {
+
+      await writeFileAsync("readme/README.md", `[![GitHub contributors](https://img.shields.io/github/contributors/${username}/${repo}.svg)](${badgesData[0]})` + "\n")
+
+    }
+
+    else {
+
+      console.log("Repo name not found! No badge added.")
+      await writeFileAsync("readme/README.md", `[![made-for-VSCode](https://img.shields.io/badge/Made%20for-VSCode-1f425f.svg)](https://code.visualstudio.com/)` + "\n")
+
+    }
 
     await writeFileAsync("readme/README.md", `[![made-for-VSCode](https://img.shields.io/badge/Made%20for-VSCode-1f425f.svg)](https://code.visualstudio.com/)` + "\n")
     await appendFileAsync("readme/README.md", `# ${name}` + "\n")
     await appendFileAsync("readme/README.md", `${description}
     ` + "\n")
-    .catch(function(err) {
+    .catch(
 
-        console.log(err);
+      err => console.log(err)
 
-    })
+    )
     
     if (contents === 'true' && testBool === 'true' && contributingBool === 'true'){
         
@@ -246,12 +283,11 @@ Or, send an email: ${email}
 
     )
 
-.then(
+  .then(
 
-  console.log("README generated!")
+    console.log("README generated!")
 
-)
-
+  )
 
     })
 
